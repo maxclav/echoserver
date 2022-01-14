@@ -1,2 +1,3 @@
 # echoserver
-Simple Multiple Ports EchoServer made in Go.
+
+Simple EchoServer made in Go.
