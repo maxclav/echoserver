@@ -11,35 +11,53 @@ import (
 const (
 	CONN_HOST = "localhost"
 	CONN_PORT = "3333"
-	CONN_TYPE = "tcp"
+	CONN_TYPE = "tcp4"
 )
 
 func main() {
 	host := CONN_HOST
 	port := CONN_PORT
-	PORT := fmt.Sprintf(":%s", port)
-	l, err := net.Listen("tcp4", PORT)
+	if len(os.Args) > 1 {
+		port = os.Args[1]
+	}
+
+	l, err := net.Listen(
+		CONN_TYPE,
+		fmt.Sprintf(":%s", port),
+	)
 	if err != nil {
-		fmt.Printf("server stopped: %s", err.Error())
+		fmt.Printf(
+			"Error creating listener: %s\n",
+			err.Error(),
+		)
 		os.Exit(1)
 	}
+
 	defer func(host, port string) {
-		fmt.Printf("Closing ")
+		fmt.Printf("Closing %v:%v.\n", host, port)
 		if err := l.Close(); err != nil {
-			fmt.Printf("Error while closing %s:%s because %s.",
+			fmt.Printf("Error while closing %s:%s because %s.\n",
 				host,
 				port,
 				err.Error(),
 			)
 		}
 	}(host, port)
-	fmt.Println("EchoServer started!")
 
+	fmt.Printf(
+		"EchoServer started on %s.\n",
+		l.Addr().String(),
+	)
+
+	handleConnections(l, host, port)
+}
+
+func handleConnections(l net.Listener, host, port string) {
 	for {
 		c, err := l.Accept()
 		if err != nil {
 			fmt.Printf(
-				"Error accepting connexion: %s\n",
+				"Error accepting connexion: %s.\n",
 				err.Error(),
 			)
 			return
@@ -59,7 +77,7 @@ func handleConnection(c net.Conn, host, port string) {
 	)
 	connAddrStr := c.RemoteAddr().String()
 	c.Write([]byte(fmt.Sprintf(
-		"Connexion with endpoint %s.\n\n",
+		"Connexion with endpoint %s.\n",
 		connAddrStr,
 	)))
 	for {
@@ -72,11 +90,7 @@ func handleConnection(c net.Conn, host, port string) {
 		}
 
 		newDataTrimedSpace := strings.TrimSpace(string(netData))
-		if newDataTrimedSpace == "STOP" {
-			fmt.Printf(
-				"Lost connexion from %s.\n",
-				c.LocalAddr(),
-			)
+		if isMessageExit(newDataTrimedSpace) {
 			break
 		}
 
@@ -86,7 +100,21 @@ func handleConnection(c net.Conn, host, port string) {
 			c.RemoteAddr(),
 		)
 		c.Write([]byte(newDataTrimedSpace))
-		c.Write([]byte("\n\n"))
+		c.Write([]byte("\n"))
 	}
-	c.Close()
+	defer func() {
+		fmt.Printf("Closing %v.\n", c.LocalAddr())
+		if err := c.Close(); err != nil {
+			fmt.Printf("Error while closing %s because %s.",
+				c.LocalAddr(),
+				err.Error(),
+			)
+		}
+	}()
+}
+
+func isMessageExit(s string) bool {
+	msg := strings.ToLower(s)
+	return msg == "stop" || msg == "exit"
+
 }
