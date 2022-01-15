@@ -2,12 +2,10 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"net"
 	"os"
 	"strings"
-	"unicode"
 )
 
 const (
@@ -82,43 +80,13 @@ func handleConnection(c net.Conn, host, port string) {
 			break
 		}
 
-		result := fixCase(newDataTrimedSpace)
 		fmt.Printf(
-			"Received \"%s\" from %s and responded \"%s\".\n",
+			"Echoed \"%s\" to %s.\n",
 			newDataTrimedSpace,
 			c.RemoteAddr(),
-			string(result),
 		)
-		c.Write(result)
+		c.Write([]byte(newDataTrimedSpace))
 		c.Write([]byte("\n\n"))
 	}
 	c.Close()
-}
-
-func fixCase(s string) []byte {
-	bb := bytes.NewBuffer(nil)
-	bb.Grow(len(s))
-	for idx, r := range s {
-		var fixedRune rune = r
-		if idx%2 == 0 {
-			fixedRune = unicode.ToLower(r)
-		} else {
-			fixedRune = unicode.ToUpper(r)
-		}
-		fixedRune = switchPunc(fixedRune)
-		b := byte(fixedRune)
-		bb.WriteByte(b)
-	}
-	return bb.Bytes()
-}
-
-func switchPunc(r rune) rune {
-	if r == '?' {
-		return '!'
-	} else if r == '!' {
-		return '?'
-	} else if r == '.' {
-		return ','
-	}
-	return r
 }
