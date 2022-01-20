@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -84,8 +85,12 @@ func handleConnection(c net.Conn, host, port string) {
 		netData, err := bufio.
 			NewReader(c).
 			ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
+		if err == io.EOF {
+			fmt.Printf("Client %s disconnected.\n", connAddrStr)
+			return
+
+		} else if err != nil {
+			fmt.Printf("Unexpected error from %s: %s\n", connAddrStr, err)
 			return
 		}
 
